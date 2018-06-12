@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/compiled_action.gni")
+
 declare_args() {
   protobuf_lite_shared = false
 }
@@ -324,10 +326,24 @@ static_library("protobuf_full") {
 # Only compile the compiler for the host architecture.
 if (current_toolchain == host_toolchain) {
   executable("js_embed") {
-    output_name = "protobuf_js_embed"
     sources = [
       "src/google/protobuf/compiler/js/embed.cc",
     ]
+  }
+  compiled_action("run_js_embed") {
+    tool = ":js_embed"
+    inputs = [
+      "src/google/protobuf/compiler/js/well_known_types/any.js",
+      "src/google/protobuf/compiler/js/well_known_types/struct.js",
+      "src/google/protobuf/compiler/js/well_known_types/timestamp.js",
+    ]
+    outputs = [
+     "$target_gen_dir/google/protobuf/compiler/js/well_known_types_embed.cc",
+    ]
+    args = [
+        "--output_file",
+        rebase_path("$target_gen_dir/google/protobuf/compiler/js/well_known_types_embed.cc", root_build_dir),
+    ] + rebase_path(inputs, root_build_dir)
   }
 
   # protoc compiler is separated into protoc library and executable targets to
@@ -483,7 +499,7 @@ if (current_toolchain == host_toolchain) {
       "src/google/protobuf/compiler/javanano/javanano_primitive_field.h",
       "src/google/protobuf/compiler/js/js_generator.cc",
       "src/google/protobuf/compiler/js/js_generator.h",
-      "src/google/protobuf/compiler/js/well_known_types_embed.cc",
+      "$target_gen_dir/google/protobuf/compiler/js/well_known_types_embed.cc",
       "src/google/protobuf/compiler/js/well_known_types_embed.h",
       "src/google/protobuf/compiler/objectivec/objectivec_enum.cc",
       "src/google/protobuf/compiler/objectivec/objectivec_enum.h",
@@ -541,6 +557,7 @@ if (current_toolchain == host_toolchain) {
 
     public_deps = [
       ":protobuf_full",
+      ":run_js_embed",
     ]
   }
 

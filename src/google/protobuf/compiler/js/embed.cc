@@ -34,8 +34,6 @@
 #include <iostream>
 #include <string>
 
-const char output_file[] = "well_known_types_embed.cc";
-
 static bool AsciiIsPrint(unsigned char c) {
   return c >= 32 && c < 127;
 }
@@ -47,7 +45,6 @@ static char ToDecimalDigit(int num) {
 
 static std::string CEscape(const std::string& str) {
   std::string dest;
-
   for (size_t i = 0; i < str.size(); ++i) {
     unsigned char ch = str[i];
     switch (ch) {
@@ -68,13 +65,11 @@ static std::string CEscape(const std::string& str) {
         break;
     }
   }
-
   return dest;
 }
 
 static void AddFile(const char* name, std::basic_ostream<char>* out) {
   std::ifstream in(name);
-
   if (!in.is_open()) {
     std::cerr << "Couldn't open input file: " << name << "\n";
     std::exit(EXIT_FAILURE);
@@ -96,17 +91,45 @@ static void AddFile(const char* name, std::basic_ostream<char>* out) {
   *out << "},\n";
 }
 
-int main(int argc, char *argv[]) {
-  std::cout << "#include "
-               "\"google/protobuf/compiler/js/well_known_types_embed.h\"\n";
-  std::cout << "struct FileToc well_known_types_js[] = {\n";
+static void WriteOutput(char* file_names[], int num_file_names,
+                        std::ostream* out) {
+  *out << "#include "
+          "\"google/protobuf/compiler/js/well_known_types_embed.h\"\n";
+  *out << "struct FileToc well_known_types_js[] = {\n";
 
-  for (int i = 1; i < argc; i++) {
-    AddFile(argv[i], &std::cout);
+  for (int i = 0; i < num_file_names; i++) {
+    AddFile(file_names[i], out);
   }
 
-  std::cout << "  {NULL, NULL}  // Terminate the list.\n";
-  std::cout << "};\n";
+  *out << "  {NULL, NULL}  // Terminate the list.\n";
+  *out << "};\n";
+}
 
+int main(int argc, char* argv[]) {
+  // If argv[1] is the flag "--output_file" and argv[2] is the path to a file
+  // that we can successfully open for output, then we write the output to
+  // that file and interpret the remaining arguments as input file names.
+  // Otherwise we interpret all arguments as input file names and write the
+  // output to std out.
+  std::ostream* out = &std::cout;
+  std::ofstream ofs;
+  char** file_names = (argc > 1 ? &argv[1] : nullptr);
+  int num_file_names = argc - 1;
+  if (argc > 2) {
+    std::string arg1(argv[1]);
+    if (arg1 == "--output_file") {
+      // Try to open the file specified by argv[2]
+      ofs.open(argv[2]);
+      if (ofs.is_open()) {
+        file_names = (argc > 3 ? &argv[3] : nullptr);
+        num_file_names = argc - 3;
+        out = &ofs;
+      }
+    }
+  }
+  WriteOutput(file_names, num_file_names, out);
+  if (ofs.is_open()) {
+    ofs.close();
+  }
   return EXIT_SUCCESS;
 }
