@@ -323,13 +323,6 @@ static_library("protobuf_full") {
 
 # Only compile the compiler for the host architecture.
 if (current_toolchain == host_toolchain) {
-  executable("js_embed") {
-    output_name = "protobuf_js_embed"
-    sources = [
-      "src/google/protobuf/compiler/js/embed.cc",
-    ]
-  }
-
   # protoc compiler is separated into protoc library and executable targets to
   # support protoc plugins that need to link libprotoc, but not the main()
   # itself. See src/google/protobuf/compiler/plugin.h
